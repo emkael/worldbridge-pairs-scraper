@@ -3,8 +3,8 @@ from bs4 import BeautifulSoup as bs
 from urlparse import urljoin
 import sys, os, hashlib, re, time, csv
 
-fetch_limit = int(sys.argv[2]) if len(sys.argv) > 2 else 50
-fetch_delay = int(sys.argv[3]) if len(sys.argv) > 3 else 120
+fetch_limit = int(sys.argv[2]) if len(sys.argv) > 2 else 100
+fetch_delay = int(sys.argv[3]) if len(sys.argv) > 3 else 10
 currently_fetched = 0
 
 bye_string = 'BYE'
