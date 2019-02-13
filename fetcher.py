@@ -74,6 +74,45 @@ class Tournament(object):
     def __repr__(self):
         return '%s (#%d)' % (self.name, self.id)
 
+    def __get_filename(self, suffix):
+        return '%d-%s' % (self.id, suffix)
+
+    def write_info(self):
+        with open(self.__get_filename('info.txt'), 'wb') as info_file:
+            print >>info_file, 'Event: %s' % self.event.name
+            print >>info_file, 'Results URL: %s' % self.event.link
+            print >>info_file, 'Tournament: %s' % self.name
+            print >>info_file, 'Sessions:'
+            for session in self.sessions:
+                print >>info_file, ' - [%d/%d] %s (%d boards): %s' % (
+                    session.group_number, session.round_number, session.name, len(session.boards), session.link)
+
+    def write_pairs(self):
+        with open(self.__get_filename('pairs.csv'), 'wb') as pairs_file:
+            writer = csv.writer(pairs_file)
+            for pair in self.pairs.values():
+                writer.writerow([pair.number] + pair.names + pair.nationalities)
+
+    def write_boards(self):
+        with open(self.__get_filename('boards.csv'), 'wb') as boards_file:
+            writer = csv.writer(boards_file)
+            for session in self.sessions:
+                for board in session.boards.values():
+                    writer.writerow([session.group_number, session.round_number, board.number, board.layout])
+
+    def write_results(self):
+        with open(self.__get_filename('results.csv'), 'wb') as results_file:
+            writer = csv.writer(results_file)
+            for session in self.sessions:
+                if not len(session.boards):
+                    print 'No results for session: %s' % session
+                for board in session.boards.values():
+                    for result in board.results:
+                        writer.writerow([session.group_number, session.round_number, board.number,
+                                         result.section, result.table,
+                                         result.ns_pair.number if result.ns_pair else '', result.ew_pair.number if result.ew_pair else '',
+                                         result.contract, result.declarer, result.lead, result.tricks, result.score])
+
 class Session(object):
     tournament = None
     link = None
@@ -226,6 +265,8 @@ class Result(object):
 results_url = sys.argv[1]
 event = Event(results_url)
 
-print event
-for tournament in event.tournaments.values():
-    print tournament, tournament.sessions, tournament.pairs
+for tour_id, tournament in event.tournaments.iteritems():
+    tournament.write_info()
+    tournament.write_pairs()
+    tournament.write_boards()
+    tournament.write_results()
