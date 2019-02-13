@@ -140,6 +140,89 @@ class Pair(object):
     def __repr__(self):
         return '#%d %s (%s)' % (self.number, ' - '.join(self.names), self.nationalities)
 
+class Board(object):
+    link = None
+    number = None
+    session = None
+    results = None
+    layout = ''
+    suits = {u"\u2665": 'H', u"\u2663": 'C', u"\u2660": 'S', u"\u2666": 'D'}
+
+    def __init__(self, number, link, session):
+        self.number = number
+        self.link = link
+        self.session = session
+        self.pair_link_regex = re.compile(r'BoardDetailsPairs\.asp\?qpairid=(\d+)&', flags=re.I)
+        self.results = []
+        self.get_results()
+
+    def __get_pair(self, cell):
+        for link in cell.select('a[href]'):
+            pair = self.pair_link_regex.search(link['href'])
+            if pair:
+                try:
+                    return self.session.tournament.pairs[int(pair.group(1))]
+                except KeyError:
+                    return None
+
+    def __strip_symbols(self, cell):
+        text = cell.text.strip()
+        for key, repl in self.suits.iteritems():
+            text = text.replace(key, repl)
+        return text
+
+    def get_results(self):
+        results = bs(fetch_url(self.link), 'lxml')
+        rows = results.select('table table table tr')
+        for row in rows:
+            for link in row.select('a[href]'):
+                if link['href'].startswith('BoardDetailsPairs.asp'):
+                    cells = row.select('td')
+                    result = Result()
+                    result.board = self
+                    result.section = int(cells[0].text.strip())
+                    result.table =  int(cells[1].text.strip())
+                    result.ns_pair = self.__get_pair(cells[2])
+                    result.ew_pair = self.__get_pair(cells[3])
+                    result.contract = self.__strip_symbols(cells[4])
+                    result.declarer = cells[5].text.strip()
+                    result.lead = self.__strip_symbols(cells[6])
+                    tricks = cells[7].text.strip()
+                    result.tricks = int(tricks) if tricks else 0
+                    score = cells[8].text.strip()
+                    if len(score):
+                        result.score = int(score)
+                    else:
+                        score = cells[9].text.strip()
+                        if len(score):
+                            result.score = -int(cells[9].text.strip())
+                        else:
+                            result.score = 0
+                    if not (result.ns_pair and result.ew_pair) and result.score <> 0:
+                        raise ValueError('Unknown pair for result: %s' % result)
+                    self.results.append(result)
+                    break
+
+class Result(object):
+    board = None
+    section = None
+    table = None
+    ns_pair = None
+    ew_pair = None
+    contract = None
+    declarer = None
+    lead = None
+    tricks = None
+    score = None
+
+    def __repr__(self):
+        return '#%d [%s %s] %s %s %s, %d tricks: %d' % (
+            self.board.number,
+            str(self.ns_pair.number) if self.ns_pair else bye_string,
+            str(self.ew_pair.number) if self.ew_pair else bye_string,
+            self.contract, self.declarer, self.lead,
+            self.tricks, self.score)
+
 results_url = sys.argv[1]
 event = Event(results_url)
 
