@@ -1,16 +1,27 @@
 import urllib2
 from bs4 import BeautifulSoup as bs
 from urlparse import urljoin
-import sys, os, hashlib, re
+import sys, os, hashlib, re, time, csv
+
+fetch_limit = int(sys.argv[2]) if len(sys.argv) > 2 else 50
+fetch_delay = int(sys.argv[3]) if len(sys.argv) > 3 else 120
+currently_fetched = 0
+
+bye_string = 'BYE'
 
 def fetch_url(url):
+    global currently_fetched
     round_hash = hashlib.sha224(url).hexdigest()
     cache_path = os.path.join('cache', round_hash)
     if not os.path.exists(cache_path):
         print 'Fetching: %s' % (url)
+        if currently_fetched > fetch_limit:
+            print 'Fetch rate limit reached, delaying for %d seconds.' % (fetch_delay)
+            time.sleep(fetch_delay)
+            currently_fetched = 0
         r_content = urllib2.urlopen(url).read()
         file(cache_path, 'w').write(r_content)
-        print 'Done.'
+        currently_fetched += 1
     else:
         r_content = file(cache_path).read()
     return r_content
