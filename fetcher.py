@@ -80,6 +80,8 @@ class Session(object):
     group_number = None
     round_number = None
     name = None
+    content = None
+    boards = None
     results = None
 
     def __init__(self, tournament, link, group_no, round_no, name):
@@ -88,16 +90,17 @@ class Session(object):
         self.group_number = group_no
         self.round_number = round_no
         self.name = name
-        self.results = bs(fetch_url(self.link), 'lxml')
+        self.content = bs(fetch_url(self.link), 'lxml')
         self.pair_link_regex = re.compile(
             r'boarddetailspairs\.asp\?qtournid=%d&qgroupno=%d&qroundno=%d&qpairid=(\d+)$' % (
                 self.tournament.id, self.group_number, self.round_number
             ),
             flags=re.I)
-        self.get_pairs()
+        self.boards = {}
+        self.get_data()
 
-    def get_pairs(self):
-        for row in self.results.select('tr tr'):
+    def get_data(self):
+        for row in self.content.select('tr tr'):
             for link in row.select('a[href]'):
                 pair_link = self.pair_link_regex.search(link['href'])
                 if pair_link:
@@ -107,6 +110,17 @@ class Session(object):
                         nationalities = row.select('td')[-2].text
                         pair = Pair(pair_number, names, nationalities, self.tournament)
                         self.tournament.pairs[pair_number] = pair
+        for row in self.content.select('tr tr'):
+            for link in row.select('a[href]'):
+                pair_link = self.pair_link_regex.search(link['href'])
+                if pair_link:
+                    pair_results = bs(fetch_url(urljoin(self.link, link['href'])), 'lxml')
+                    for board_link in pair_results.select('a[href]'):
+                        if board_link['href'].startswith('BoardAcrosspairs.asp'):
+                            board_number = int(board_link.text.strip())
+                            if board_number not in self.boards:
+                                board = Board(board_number, urljoin(urljoin(self.link, link['href']), board_link['href']), self)
+                                self.boards[board_number] = board
 
     def __repr__(self):
         return '%s (#%d/%d/%d)' % (self.name, self.tournament.id, self.group_number, self.round_number)
