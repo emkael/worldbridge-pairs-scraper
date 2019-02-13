@@ -107,7 +107,7 @@ class Session(object):
                     pair_number = int(pair_link.group(1))
                     if pair_number not in self.tournament.pairs:
                         names = [a.text for a in row.select('a[href]') if 'person.asp' in a['href']]
-                        nationalities = row.select('td')[-2].text
+                        nationalities = row.select('td')[-2].text.split(' - ')
                         pair = Pair(pair_number, names, nationalities, self.tournament)
                         self.tournament.pairs[pair_number] = pair
         for row in self.content.select('tr tr'):
