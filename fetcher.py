@@ -123,7 +123,7 @@ class Session(object):
                                 self.boards[board_number] = board
 
     def __repr__(self):
-        return '%s (#%d/%d/%d)' % (self.name, self.tournament.id, self.group_number, self.round_number)
+        return '%s %s (#%d/%d/%d)' % (self.tournament.name, self.name, self.tournament.id, self.group_number, self.round_number)
 
 class Pair(object):
     number = None
