@@ -83,30 +83,30 @@ class Tournament(object):
             print >>info_file, 'Results URL: %s' % self.event.link
             print >>info_file, 'Tournament: %s' % self.name
             print >>info_file, 'Sessions:'
-            for session in self.sessions:
+            for session in sorted(self.sessions):
                 print >>info_file, ' - [%d/%d] %s (%d boards): %s' % (
                     session.group_number, session.round_number, session.name, len(session.boards), session.link)
 
     def write_pairs(self):
         with open(self.__get_filename('pairs.csv'), 'wb') as pairs_file:
             writer = csv.writer(pairs_file)
-            for pair in self.pairs.values():
+            for pair in sorted(self.pairs.values()):
                 writer.writerow([pair.number] + pair.names + pair.nationalities)
 
     def write_boards(self):
         with open(self.__get_filename('boards.csv'), 'wb') as boards_file:
             writer = csv.writer(boards_file)
-            for session in self.sessions:
-                for board in session.boards.values():
+            for session in sorted(self.sessions):
+                for board in sorted(session.boards.values()):
                     writer.writerow([session.group_number, session.round_number, board.number, board.layout])
 
     def write_results(self):
         with open(self.__get_filename('results.csv'), 'wb') as results_file:
             writer = csv.writer(results_file)
-            for session in self.sessions:
+            for session in sorted(self.sessions):
                 if not len(session.boards):
                     print 'No results for session: %s' % session
-                for board in session.boards.values():
+                for board in sorted(session.boards.values()):
                     for result in board.results:
                         writer.writerow([session.group_number, session.round_number, board.number,
                                          result.section, result.table,
@@ -137,6 +137,9 @@ class Session(object):
             flags=re.I)
         self.boards = {}
         self.get_data()
+
+    def __cmp__(self, other):
+        return cmp(self.group_number, other.group_number) or cmp(self.round_number, other.round_number)
 
     def get_data(self):
         for row in self.content.select('tr tr'):
@@ -176,6 +179,9 @@ class Pair(object):
         self.tournament = tournament
         self.nationalities = nationalities
 
+    def __cmp__(self, other):
+        return cmp(self.number, other.number)
+
     def __repr__(self):
         return '#%d %s (%s)' % (self.number, ' - '.join(self.names), self.nationalities)
 
@@ -194,6 +200,9 @@ class Board(object):
         self.pair_link_regex = re.compile(r'BoardDetailsPairs\.asp\?qpairid=(\d+)&', flags=re.I)
         self.results = []
         self.get_results()
+
+    def __cmp__(self, other):
+        return cmp(self.session, other.session) or cmp(self.number, other.number)
 
     def __get_pair(self, cell):
         for link in cell.select('a[href]'):
@@ -253,6 +262,9 @@ class Result(object):
     lead = None
     tricks = None
     score = None
+
+    def __cmp__(self, other):
+        return cmp(self.board, other.board) or cmp(self.section, other.section) or cmp(self.table, other.table)
 
     def __repr__(self):
         return '#%d [%s %s] %s %s %s, %d tricks: %d' % (
