@@ -1,6 +1,6 @@
 import urllib2
 from bs4 import BeautifulSoup as bs
-from urlparse import urljoin
+from urlparse import urljoin, urlparse, parse_qs
 import sys, os, hashlib, re, time, csv
 
 fetch_limit = int(sys.argv[2]) if len(sys.argv) > 2 else 100
@@ -31,7 +31,6 @@ class Event(object):
     name = None
     tournaments = None
     results = None
-    session_link_regex = re.compile(r'/TotalPairs\.asp\?qtournid=(\d+)&qroundno=(\d+)&qgroupno=(\d+)$', flags=re.I)
 
     def __init__(self, link):
         self.link = link
@@ -42,11 +41,11 @@ class Event(object):
 
     def get_tournaments(self):
         for link in self.results.select('a[href]'):
-            session_link = self.session_link_regex.search(link['href'])
-            if session_link:
-                tournament_id = int(session_link.group(1))
-                session_number = int(session_link.group(2))
-                session_group = int(session_link.group(3))
+            if 'TotalPairs.asp' in link['href']:
+                url = parse_qs(urlparse(link['href']).query)
+                tournament_id = int(url['qtournid'][0])
+                session_number = int(url['qroundno'][0])
+                session_group = int(url['qgroupno'][0])
                 if tournament_id not in self.tournaments:
                     self.tournaments[tournament_id] = Tournament(self)
                 self.tournaments[tournament_id].id = tournament_id
@@ -148,7 +147,7 @@ class Session(object):
                 if pair_link:
                     pair_number = int(pair_link.group(1))
                     if pair_number not in self.tournament.pairs:
-                        names = [a.text for a in row.select('a[href]') if 'person.asp' in a['href']]
+                        names = [a.text for a in row.select('a[href]') if 'person' in a['href']]
                         nationalities = row.select('td')[-2].text.split(' - ')
                         pair = Pair(pair_number, names, nationalities, self.tournament)
                         self.tournament.pairs[pair_number] = pair
