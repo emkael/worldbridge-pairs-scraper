@@ -1,7 +1,13 @@
+import csv
+import hashlib
+import os
+import re
+import sys
+import time
 import urllib2
+from urlparse import parse_qs, urljoin, urlparse
+
 from bs4 import BeautifulSoup as bs
-from urlparse import urljoin, urlparse, parse_qs
-import sys, os, hashlib, re, time, csv
 
 fetch_limit = int(sys.argv[2]) if len(sys.argv) > 2 else 100
 fetch_delay = int(sys.argv[3]) if len(sys.argv) > 3 else 10
